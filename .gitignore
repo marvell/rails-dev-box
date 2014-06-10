@@ -1,2 +1,3 @@
-.vagrant
-rails
+/.vagrant
+/apps/*
+!/apps/.keep

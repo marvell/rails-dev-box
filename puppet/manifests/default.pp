@@ -1,10 +1,12 @@
 $ar_databases = ['activerecord_unittest', 'activerecord_unittest2']
 $as_vagrant   = 'sudo -u vagrant -H bash -l -c'
+$as_root      = 'sudo -u root -H bash -l -c'
 $home         = '/home/vagrant'
+$puppet       = '/vagrant/puppet'
 
 # Pick a Ruby version modern enough, that works in the currently supported Rails
 # versions, and for which RVM provides binaries.
-$ruby_version = '2.1.1'
+$ruby_version = '2.1.2'
 
 Exec {
   path => ['/usr/sbin', '/usr/bin', '/sbin', '/bin']
@@ -144,9 +146,20 @@ exec { 'install_ruby':
   require => Exec['install_rvm']
 }
 
+# Install gems without documentaions
+exec { "${as_vagrant} 'echo \"gem: --no-rdoc --no-ri\" > ${home}/.gemrc'":
+  require => Exec['install_ruby'],
+}
+
 # RVM installs a version of bundler, but for edge Rails we want the most recent one.
-exec { "${as_vagrant} 'gem install bundler --no-rdoc --no-ri'":
+exec { 'install_bundler':
+  command => "${as_vagrant} 'gem install bundler --no-rdoc --no-ri'",
   creates => "${home}/.rvm/bin/bundle",
+  require => Exec['install_ruby']
+}
+
+file { "${home}/apps":
+  ensure => "directory",
   require => Exec['install_ruby']
 }
 
@@ -156,3 +169,12 @@ exec { "${as_vagrant} 'gem install bundler --no-rdoc --no-ri'":
 exec { 'update-locale':
   command => 'update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8'
 }
+
+# Colorize bash
+exec { "${as_vagrant} 'sed -i \"s/#force_color_prompt=yes/force_color_prompt=yes/g\" ${home}/.bashrc'": }
+
+# Fix bug "stdin: is not a tty"
+exec { "${as_root} 'sed -i \"s/^mesg n$/tty -s \\&\\& mesg n/g\" /root/.profile'": }
+
+# Copy dots
+exec { "${as_vagrant} 'cp -a ${$puppet}/home/. ${home}/'": }
