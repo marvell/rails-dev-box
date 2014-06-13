@@ -21,7 +21,7 @@ Vagrant.configure('2') do |config|
   config.vm.network :private_network, ip: '192.168.33.10'
   # config.vm.network :forwarded_port, guest: 3000, host: 3000
 
-  config.vm.synced_folder './apps', '/home/vagrant/apps'
+  config.vm.synced_folder './apps', '/home/vagrant/apps', type: 'nfs'
 
   config.vm.provision :puppet do |puppet|
     puppet.manifests_path = 'puppet/manifests'
