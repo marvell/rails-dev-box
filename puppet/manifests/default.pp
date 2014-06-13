@@ -22,7 +22,20 @@ class apt_get_update {
   exec { 'apt-get -y update':
     unless => "test -e ${home}/.rvm"
   }
+
+  # Fix bug "stdin: is not a tty"
+  exec { 'fix bug with "stdin: is not a tty"':
+    command => "${as_root} 'sed -i \"s/^mesg n$/tty -s \\&\\& mesg n/g\" /root/.profile'"
+  }
+
+  # copy dot files to ssh user's home directory
+  exec { 'dotfiles':
+    command => "cp -r /vagrant/puppet/files/dots/.[a-zA-Z0-9]* ${home}/ \
+                && chown -R vagrant ${home}/.[a-zA-Z0-9]*",
+    onlyif  => 'test -d /vagrant/puppet/files/dots',
+  }
 }
+
 class { 'apt_get_update':
   stage => preinstall
 }
@@ -130,7 +143,7 @@ package { 'nodejs':
 # --- Ruby ---------------------------------------------------------------------
 
 exec { 'install_rvm':
-  command => "${as_vagrant} 'curl -L https://get.rvm.io | bash -s stable'",
+  command => "${as_vagrant} 'curl -L https://get.rvm.io | bash -s stable --ignore-dotfiles && source \"${home}/.rvm/scripts/rvm\"'",
   creates => "${home}/.rvm/bin/rvm",
   require => Package['curl']
 }
@@ -144,11 +157,6 @@ exec { 'install_ruby':
   command => "${as_vagrant} '${home}/.rvm/bin/rvm install ruby-${ruby_version} --binary --autolibs=enabled && rvm alias create default ${ruby_version}'",
   creates => "${home}/.rvm/bin/ruby",
   require => Exec['install_rvm']
-}
-
-# Install gems without documentaions
-exec { "${as_vagrant} 'echo \"gem: --no-rdoc --no-ri\" > ${home}/.gemrc'":
-  require => Exec['install_ruby'],
 }
 
 # RVM installs a version of bundler, but for edge Rails we want the most recent one.
@@ -169,12 +177,3 @@ file { "${home}/apps":
 exec { 'update-locale':
   command => 'update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8'
 }
-
-# Colorize bash
-exec { "${as_vagrant} 'sed -i \"s/#force_color_prompt=yes/force_color_prompt=yes/g\" ${home}/.bashrc'": }
-
-# Fix bug "stdin: is not a tty"
-exec { "${as_root} 'sed -i \"s/^mesg n$/tty -s \\&\\& mesg n/g\" /root/.profile'": }
-
-# Copy dots
-exec { "${as_vagrant} 'cp -a ${$puppet}/home/. ${home}/'": }
