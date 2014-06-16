@@ -3,3 +3,6 @@
 	email = alex@ndr.su
 [alias]
 	s = status
+	a = add
+[color]
+	ui = true
